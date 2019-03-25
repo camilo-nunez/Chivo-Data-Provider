@@ -90,6 +90,7 @@ def filesPathsXmous(name_in):
 			WHERE pipeline_archive_request_information.idpipeline_archive_request_information=fits_files_main.pipeline_archive_request_information_id_forean AND coordinate_information.id_coordinate_information=fits_files_main. coordinate_information_id_forean \
 			AND fits_files_main.name_file= '%s' """
 	try:
+		print(1)
 		db_config = read_db_postgres_config()
 		conn = psycopg2.connect(**db_config)
 
@@ -103,6 +104,7 @@ def filesPathsXmous(name_in):
 		cursor.close()
 		conn.close()
 	except Exception as error:
+		print(2)
 		web.redirect('/error')
 		return_var = error
 	finally:

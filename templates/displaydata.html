@@ -9,8 +9,13 @@ $def with(tam,mous_searh)
           var mous_in = "$mous_searh";
           var lengthFile = "$tam";
           var directionUrl = "http://provider.chivo.cl/fitsprovider?name=";
-          var enGIgas = Math.round((lengthFile/1024)/1024);
-          var confirmed = confirm("The total size of files is: "+enGIgas+" [MB] \nContinue ?");
+          function bytesToSize(bytes) {
+             var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+             if (bytes == 0) return '0 Byte';
+             var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+             return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+          };
+          var confirmed = confirm("The total size of files is: "+bytesToSize(lengthFile)+" \nContinue ?");
           if (confirmed){
             window.location.replace(directionUrl+mous_in);
           } else {

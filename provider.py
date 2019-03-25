@@ -90,7 +90,6 @@ def filesPathsXmous(name_in):
 			WHERE pipeline_archive_request_information.idpipeline_archive_request_information=fits_files_main.pipeline_archive_request_information_id_forean AND coordinate_information.id_coordinate_information=fits_files_main. coordinate_information_id_forean \
 			AND fits_files_main.name_file= '%s' """
 	try:
-		print "1"
 		db_config = read_db_postgres_config()
 		conn = psycopg2.connect(**db_config)
 
@@ -104,7 +103,6 @@ def filesPathsXmous(name_in):
 		cursor.close()
 		conn.close()
 	except Exception as error:
-		print "2"
 		web.redirect('/error')
 		return_var = error
 	finally:
@@ -113,7 +111,6 @@ def filesPathsXmous(name_in):
 class Tarballsprovider(object):
 	def GET(self):
 		user_data = web.input()
-		print "1"
 
 class ConfirmDown(object):
 	def GET(self):
@@ -128,7 +125,6 @@ class ConfirmDown(object):
 					lengthFile += os.path.getsize(file)
 				return render.displaydata(lengthFile,name_in)				
 			else:
-				print "1"
 				raise web.redirect('/notfound')
 		else:
 			raise web.redirect('/error')
@@ -139,7 +135,6 @@ class FitsProvider(object):
 		if user_data and user_data.name:
 			name_in = user_data.name
 			files_found = filesPathsXmous(name_in)
-			print "files_found"
 			if len(files_found)!=0:
 				fileForDown = files_found[0]
 				lengthFile = os.path.getsize(fileForDown)
@@ -154,7 +149,6 @@ class FitsProvider(object):
 							break
 						yield buf
 				except Exception as e:
-					print "e"
 					raise web.redirect('/error')				
 			else:
 				raise web.redirect('/notfound')

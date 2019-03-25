@@ -2,7 +2,6 @@ import web
 import os
 import sys
 from os.path import join
-import tarfile
 import logging
 from wsgilog import WsgiLog
 import psycopg2
@@ -11,16 +10,15 @@ import multiprocessing as mp
 import json
 
 __author__    =   "Camilo Nunez Fernandez"
-__version__   =   1.8
+__version__   =   1.9
 __licence__   =   "GPL v.2"
 __file__      =   "provider.py"
 __desc__      =   """File provider for fits"""
 
 pjoin = os.path.join
-runtime_dir = pjoin('/data/chivo_provider_files/')
-fitsPath = pjoin('/data/data_pub/fits_delivery_pub/files/')
-pathTarballsTemp=pjoin('/data/data_pub/cache_provider/')
-pathLog=pjoin('/data/chivo_provider_files/log/')
+runtime_dir = pjoin('/Chivo-Data-Provider/')
+fitsPath = pjoin('/archive/chivo_sets/fits_delivery_pub/files/')
+pathLog=pjoin('/var/log/')
 pathconfdb=pjoin(runtime_dir,'config.ini')
 
 portApp=9000
@@ -45,11 +43,11 @@ urls = (
 	'/fitsprovider', 'FitsProvider',
 	'/error', 'Error',
 	'/notfound', 'NotFound',
-	'/confirm','ConfirmDown'
+	'/confirm','ConfirmDown',
+	'/tarballsprovider','Tarballsprovider'
 )
 
 render_templates_path = pjoin('/data/chivo_provider_files/templates/')
-#render = web.template.render(render_templates_path,globals=template_globals, base="layout")
 render = web.template.render(render_templates_path)
 providerMain = web.application(urls, globals())
 
@@ -82,19 +80,21 @@ class FileLog(WsgiLog):
 
 		return super(FileLog, self).__call__(environ, hstart_response)
 
-# Retorna una lista de los fits a insertar en el tar
-def filesPathsXmous(mous_in):
+def searchTarball():
+	regex = r'(?P<project>.*?)_(?P<code>.*?)_(?P<mous>.*?)_001_of_001.tar'
+
+# Retorna una lista de los fits
+def filesPathsXmous(name_in):
 	return_var=[]
 	query = """SELECT DISTINCT name_file FROM fits_files_main,pipeline_archive_request_information,coordinate_information \
-					WHERE pipeline_archive_request_information.idpipeline_archive_request_information=fits_files_main.pipeline_archive_request_information_id_forean AND coordinate_information.id_coordinate_information=fits_files_main. coordinate_information_id_forean \
-					AND pipeline_archive_request_information.member= '%s' """
+			WHERE pipeline_archive_request_information.idpipeline_archive_request_information=fits_files_main.pipeline_archive_request_information_id_forean AND coordinate_information.id_coordinate_information=fits_files_main. coordinate_information_id_forean \
+			AND fits_files_main.name_file= '%s' """
 	try:
 		db_config = read_db_postgres_config()
 		conn = psycopg2.connect(**db_config)
 
 		cursor = conn.cursor()
-		#cursor.execute(query%(ra_in,dec_in,mous_in))
-		cursor.execute(query%(mous_in))
+		cursor.execute(query%(name_in))
 
 		rows = cursor.fetchall()
 		for row in rows:
@@ -108,39 +108,26 @@ def filesPathsXmous(mous_in):
 	finally:
 		return (return_var)
 
-# Comprime los archivos (desde la lista de paths) en un tar con el nombre del mous
-def packTarball(files,nameFile):
-    processes = []
-    pathTarball = pjoin(pathTarballsTemp,"%s.tar.gz"%nameFile)
-    if not os.path.isfile(pathTarball):
-        tar = tarfile.open(pathTarball, "w:gz")
-        for file in files:
-            p = mp.Process(target=tar.add, args=(file,file.split("/")[-1],))
-            p.start()
-            processes.append(p)
-        while not len(processes) == 0:
-            proc = processes.pop(0)
-            if proc.is_alive():
-                processes.append(proc)
-            else:
-                #print(proc.name, proc.pid)
-                pass
-        tar.close()
-    return pathTarball
+class Tarballsprovider(object):
+	def GET(self):
+		user_data = web.input()
+		print(1)
 
 class ConfirmDown(object):
 	def GET(self):
 		user_data = web.input()
 		
-		if user_data and user_data.mous:
-			mous_in = user_data.mous
-			files_found = filesPathsXmous(mous_in)
+		if user_data and user_data.name:
+			name_in = user_data.name
+			files_found = filesPathsXmous(name_in)
+			print(files_found)
 			if len(files_found)!=0:
 				lengthFile = 0
 				for file in files_found:
 					lengthFile += os.path.getsize(file)
-				return render.displaydata(lengthFile,mous_in)				
+				return render.displaydata(lengthFile,name_in)				
 			else:
+				print(1)
 				raise web.redirect('/notfound')
 		else:
 			raise web.redirect('/error')
@@ -148,17 +135,18 @@ class ConfirmDown(object):
 class FitsProvider(object):
 	def GET(self):
 		user_data = web.input()
-		if user_data and user_data.mous:
-			mous_in = user_data.mous
-			files_found = filesPathsXmous(mous_in)
+		if user_data and user_data.name:
+			name_in = user_data.name
+			files_found = filesPathsXmous(name_in)
+			print(files_found)
 			if len(files_found)!=0:
-				tarForDown = packTarball(files_found, mous_in)
-				lengthFile = os.path.getsize(tarForDown)
+				fileForDown = files_found[0]
+				lengthFile = os.path.getsize(fileForDown)
 				try:
-					web.header('Content-Disposition', 'attachment; filename={} '.format(tarForDown.split("/")[-1]))
+					web.header('Content-Disposition', 'attachment; filename={} '.format(fileForDown.split("/")[-1]))
 					web.header('Content-Type', 'application/octet-stream')
 					web.header('Content-Length', lengthFile)
-					f = open(tarForDown, 'rb')
+					f = open(fileForDown, 'rb')
 					while 1:
 						buf = f.read(1024 * 8)
 						if not buf:
@@ -184,7 +172,7 @@ if __name__ == "__main__":
 	template_globals = {"json_encode": json.dumps}
 	
 	web.config.log_file = pjoin(pathLog,"provider.log")
-	web.config.debug=True
+	web.config.debug=False
 	web.config.log_toprint = False
 	web.config.log_tofile = True
-	web.httpserver.runsimple(providerMain.wsgifunc(FileLog), ("0.0.0.0", portApp))
+	web.httpserver.runsimple(providerMain.wsgifunc(FileLog), ("10.6.91.25", portApp))

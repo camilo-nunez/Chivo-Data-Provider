@@ -123,16 +123,17 @@ class ConfirmDown(object):
 			name_in = user_data.name
 			files_found = filesPathsXmous(name_in)
 			print files_found
-			if len(files_found)!=0:
-				lengthFile = 0
-				for file in files_found:
-					lengthFile += os.path.getsize(file)
-				return render.displaydata(lengthFile,name_in)				
-			else:
-				print "1"
-				raise web.redirect('/notfound')
-		else:
-			raise web.redirect('/error')
+		# 	print files_found
+		# 	if len(files_found)!=0:
+		# 		lengthFile = 0
+		# 		for file in files_found:
+		# 			lengthFile += os.path.getsize(file)
+		# 		return render.displaydata(lengthFile,name_in)				
+		# 	else:
+		# 		print "1"
+		# 		raise web.redirect('/notfound')
+		# else:
+		# 	raise web.redirect('/error')
 
 class FitsProvider(object):
 	def GET(self):

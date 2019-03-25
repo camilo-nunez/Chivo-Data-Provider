@@ -47,7 +47,7 @@ urls = (
 	'/tarballsprovider','Tarballsprovider'
 )
 
-render_templates_path = pjoin('/data/chivo_provider_files/templates/')
+render_templates_path = pjoin(runtime_dir,'templates/')
 render = web.template.render(render_templates_path)
 providerMain = web.application(urls, globals())
 
